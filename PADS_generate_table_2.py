@@ -27,8 +27,10 @@ def parse_events(input_text):
                     'event': event_desc,
                     'type': event_type,
                     'unit': unit,
-                    'E': [],
-                    'R': []
+                    'E': [],  # All events (sorted)
+                    'D': [],  # Direct dependencies
+                    'I': [],  # Indirect dependencies
+                    'R': []   # Independent events
                 }
                 events.append(current_event)
             except (IndexError, ValueError) as e:
@@ -37,6 +39,18 @@ def parse_events(input_text):
             try:
                 deps = re.findall(r"\('([\d.]+)', '([^']+)', (\d+)\)", line)
                 current_event['E'] = [(event_type[0], float(time), int(unit)) for time, event_type, unit in deps]
+            except:
+                continue
+        elif current_event and 'EC - Direct Dependencies (D):' in line:
+            try:
+                deps = re.findall(r"\('([\d.]+)', '([^']+)', (\d+)\)", line)
+                current_event['D'] = [(event_type[0], float(time), int(unit)) for time, event_type, unit in deps]
+            except:
+                continue
+        elif current_event and 'EC - Indirect Dependencies (I):' in line:
+            try:
+                deps = re.findall(r"\('([\d.]+)', '([^']+)', (\d+)\)", line)
+                current_event['I'] = [(event_type[0], float(time), int(unit)) for time, event_type, unit in deps]
             except:
                 continue
         elif current_event and 'Independent Events (R):' in line:
@@ -48,19 +62,24 @@ def parse_events(input_text):
     
     return events
 
-def should_be_bold(typ, unit):
-    # 1-D events should be bold
-    if typ == 'D' and unit == 1:
-        return True
+def is_in_set(event, event_set):
+    """Check if an event (type, time, unit) is in a given set"""
+    for e in event_set:
+        if e[0] == event[0] and abs(e[1] - event[1]) < 0.001 and e[2] == event[2]:
+            return True
     return False
 
-def should_be_red(typ, unit, i):
-    # 2-D and 4-D events should be bold and red after a certain point
-    if typ == 'D' and (unit == 2 or unit == 4) and i >= 33:
-        return True
-    return False
+def truncate_float(value, decimals=2):
+    """Truncate (not round) a float to the specified number of decimal places"""
+    factor = 10 ** decimals
+    return int(value * factor) / factor
 
-def format_event_set(events, event_i):
+def format_event_set(events, event_sets):
+    """
+    Format event set with proper styling
+    events: List of (type, time, unit) tuples to format
+    event_sets: Dictionary containing 'D' and 'I' sets for checking membership
+    """
     if not events:
         return "\\{\\}"
     
@@ -69,15 +88,20 @@ def format_event_set(events, event_i):
     
     formatted_events = []
     for typ, time, unit in sorted_events:
-        # Format each event
-        event_str = f"(\\mathtt{{{unit}\\text{{-}}{typ}}}, {time:.2f})"
+        # Truncate time to 2 decimal places (no rounding)
+        trunc_time = truncate_float(time, 2)
+        # Format with exactly 2 decimal places
+        time_str = f"{trunc_time:.2f}"
         
-        # Check if it should be bold
-        if should_be_bold(typ, unit):
+        # Format each event
+        event_str = f"(\\mathtt{{{unit}\\text{{-}}{typ}}}, {time_str})"
+        
+        # Check if it should be bold (in set D)
+        if is_in_set((typ, time, unit), event_sets['D']):
             event_str = f"\\boldsymbol{{{event_str}}}"
         
-        # Check if it should be red and bold
-        if should_be_red(typ, unit, event_i):
+        # Check if it should be red and bold (in set I)
+        if is_in_set((typ, time, unit), event_sets['I']):
             event_str = f"\\boldsymbol{{\\textcolor{{red!80!black}}{{{event_str}}}}}"
             
         formatted_events.append(event_str)
@@ -107,10 +131,15 @@ def main():
         if evt['i'] < 30 or evt['i'] > 37:  # the ones included in the table
             continue
         
-        E_str = format_event_set(evt['E'], evt['i'])
-        R_str = format_event_set(evt['R'], evt['i'])
+        event_sets = {'D': evt['D'], 'I': evt['I']}
+        E_str = format_event_set(evt['E'], event_sets)
+        R_str = format_event_set(evt['R'], event_sets)
         
-        output_lines.append(f"    {evt['i']} & {evt['t']:.2f} & ${E_str}$ & ${R_str}$ \\\\")
+        # Truncate simulation time to 2 decimal places (no rounding)
+        trunc_time = truncate_float(evt['t'], 2)
+        # Format with exactly 2 decimal places
+        time_str = f"{trunc_time:.2f}"
+        output_lines.append(f"    {evt['i']} & {time_str} & ${E_str}$ & ${R_str}$ \\\\")
     
     output_lines.append("    \\hline")
     output_lines.append("    \\end{tabular}")
