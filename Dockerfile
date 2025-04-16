@@ -50,7 +50,7 @@ COPY Grid_VN3D/*.cpp Grid_VN3D/*.h /app/Grid_VN3D/
 COPY *.py /app/
 
 # Compile the code
-RUN make
+#RUN make
 
 # Set up matplotlib to use a non-interactive backend
 ENV MPLBACKEND=Agg

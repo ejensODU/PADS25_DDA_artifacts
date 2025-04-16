@@ -3,6 +3,8 @@
 
 #include <iostream>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <numeric>
 #include <chrono>
 #include <cmath>
@@ -147,11 +149,14 @@ bool OoO_EventSet::UpdateEventSet(double& simTime)
     return !_E.empty() && simTime <= _maxSimTime;
 }
 
-void OoO_EventSet::ExecuteSerial(double& simTime, std::atomic<int>& numEventsExecuted, std::string execOrderFilename)
+void OoO_EventSet::ExecuteSerial_IO(double& simTime, std::atomic<int>& numEventsExecuted, std::string IO_ExecOrderFilename)
 {
 	// Serial IO execution order
-	/* std::ofstream exec_order_file(execOrderFilename);
-    exec_order_file << "event_sequence_num, timestamp, event_type" << std::endl; */
+    std::ofstream IO_exec_order_file;
+    if (!IO_ExecOrderFilename.empty()) {
+	    IO_exec_order_file.open(IO_ExecOrderFilename);
+        IO_exec_order_file << "event_sequence_num, timestamp, event_type" << std::endl;
+    }
 	
     // Continue until event set is empty or max time is reached
     while (!_E.empty() && (*_E.begin())->getTime() <= _maxSimTime) {
@@ -175,9 +180,11 @@ void OoO_EventSet::ExecuteSerial(double& simTime, std::atomic<int>& numEventsExe
         size_t event_index = numEventsExecuted.fetch_add(1);
 		
 		// Serial IO execution order
-		/* exec_order_file << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10)
+        if (!IO_ExecOrderFilename.empty()) {
+		    IO_exec_order_file << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10)
 			<< event_index << ", " << simTime << ", "
-			<< first_event->getVertex()->getVertexName() << std::endl; */
+			<< first_event->getVertex()->getVertexName() << std::endl;
+        }
         
         // Remove the executed event
         _E.erase(_E.begin());
@@ -200,28 +207,30 @@ void OoO_EventSet::ExecuteSerial_OoO(double& simTime, std::atomic<int>& numEvent
     double std_ready_event_index;
 	
 	// Serial OoO execution order
-	/* size_t num_event_matches = 0;
+    size_t num_event_matches = 0;
     std::vector<size_t> index_diffs;
     std::vector<EventRecord> IO_events;
-    std::ifstream exec_order_file(IO_ExecOrderFilename);
-    std::string line;
-    std::getline(exec_order_file, line); // header
-    while (std::getline(exec_order_file, line)) {
-        std::stringstream ss(line);
-        std::string token;
-        // Parse sequence number
-        std::getline(ss, token, ',');
-        size_t seq = std::stoi(token);
-        // Parse timestamp
-        std::getline(ss, token, ',');
-        double timestamp = std::stod(token);
-        // Parse event type
-        std::getline(ss, token, ',');
-        // Remove leading/trailing whitespace
-        token.erase(0, token.find_first_not_of(" \t"));
-        token.erase(token.find_last_not_of(" \t") + 1);
-        IO_events.emplace_back(seq, timestamp, token);
-    } */
+    if (!IO_ExecOrderFilename.empty()) {
+        std::ifstream IO_exec_order_file(IO_ExecOrderFilename);
+        std::string line;
+        std::getline(IO_exec_order_file, line); // header
+        while (std::getline(IO_exec_order_file, line)) {
+            std::stringstream ss(line);
+            std::string token;
+            // Parse sequence number
+            std::getline(ss, token, ',');
+            size_t seq = std::stoi(token);
+            // Parse timestamp
+            std::getline(ss, token, ',');
+            double timestamp = std::stod(token);
+            // Parse event type
+            std::getline(ss, token, ',');
+            // Remove leading/trailing whitespace
+            token.erase(0, token.find_first_not_of(" \t"));
+            token.erase(token.find_last_not_of(" \t") + 1);
+            IO_events.emplace_back(seq, timestamp, token);
+        }
+    }
 
     // Create file for ready event sets
     //std::ofstream RE_sets("RE_sets.txt");
@@ -271,16 +280,18 @@ void OoO_EventSet::ExecuteSerial_OoO(double& simTime, std::atomic<int>& numEvent
                 ready_events_vector[i]->setStatus(2);
 
                 // Record execution for analysis
-                //double timestamp = ready_events_vector[i]->getTime();
-                //std::string vertex_name = ready_events_vector[i]->getVertex()->getVertexName();
+                double timestamp = ready_events_vector[i]->getTime();
+                std::string vertex_name = ready_events_vector[i]->getVertex()->getVertexName();
                 //RE_sets << "(" << vertex_name << "," << timestamp << ")" << ",";
 				
 				// Serial OoO execution order
-				/* size_t event_index = numEventsExecuted.fetch_add(1);
-                if (IO_events.at(event_index)._timestamp == timestamp && IO_events.at(event_index)._eventType == vertex_name) num_event_matches++;
-                for (const auto& event_record : IO_events) {
-                    if (event_record._timestamp == timestamp && event_record._eventType == vertex_name) index_diffs.push_back(abs(event_index-event_record._sequenceNum));
-                } */
+                if (!IO_ExecOrderFilename.empty()) {
+                    size_t event_index = numEventsExecuted.fetch_add(1);
+                    if (IO_events.at(event_index)._timestamp == timestamp && IO_events.at(event_index)._eventType == vertex_name) num_event_matches++;
+                    for (const auto& event_record : IO_events) {
+                        if (event_record._timestamp == timestamp && event_record._eventType == vertex_name) index_diffs.push_back(abs(event_index-event_record._sequenceNum));
+                    }
+                }
 				
             }
             //RE_sets << std::endl;
@@ -291,18 +302,20 @@ void OoO_EventSet::ExecuteSerial_OoO(double& simTime, std::atomic<int>& numEvent
     }
 	
 	// Serial OoO execution order
-	/* double sum_diffs = std::accumulate(index_diffs.begin(), index_diffs.end(), 0.0);
-    double mean_diffs = sum_diffs / index_diffs.size();
-    double square_sum_diffs = std::inner_product(
-        index_diffs.begin(), index_diffs.end(),
-                                                 index_diffs.begin(), 0.0,
-                                                 std::plus<>(),
-                                                 [mean_diffs](size_t a, size_t b) { return (a - mean_diffs) * (b - mean_diffs); }
-    );
-    double std_diffs = std::sqrt(square_sum_diffs / index_diffs.size());
-    std::ofstream match_count_file(IO_ExecOrderFilename);
-    match_count_file << "num_event_matches, mean_diffs, std_diffs" << std::endl;
-    match_count_file << num_event_matches << ", " << mean_diffs << ", " << std_diffs << std::endl; */
+    if (!IO_ExecOrderFilename.empty()) {
+        double sum_diffs = std::accumulate(index_diffs.begin(), index_diffs.end(), 0.0);
+        double mean_diffs = sum_diffs / index_diffs.size();
+        double square_sum_diffs = std::inner_product(
+            index_diffs.begin(), index_diffs.end(),
+                                                    index_diffs.begin(), 0.0,
+                                                    std::plus<>(),
+                                                    [mean_diffs](size_t a, size_t b) { return (a - mean_diffs) * (b - mean_diffs); }
+        );
+        double std_diffs = std::sqrt(square_sum_diffs / index_diffs.size());
+        std::ofstream match_count_file(IO_ExecOrderFilename);
+        match_count_file << "num_event_matches, mean_diffs, std_diffs" << std::endl;
+        match_count_file << num_event_matches << ", " << mean_diffs << ", " << std_diffs << std::endl;
+    }
 	
     return;
 }

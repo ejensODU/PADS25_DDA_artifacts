@@ -62,6 +62,8 @@ int main(int argc, char* argv[])
             "_threads_" + std::to_string(num_threads) +
             "_servers_" + std::to_string(num_servers_per_network_node) + ".csv";
 
+            if (ring_size > 64) exec_order_filename = "";
+
             Ring_1D ring_sim(ring_size, num_servers_per_network_node, max_num_intra_arrive_events, max_sim_time, num_threads, dist_seed, num_serial_OoO_execs, trace_folder_name, dist_params_file);
             ring_sim.SimulateModel(exec_order_filename);
             ring_sim.PrintMeanPacketNetworkTime();
@@ -109,6 +111,8 @@ int main(int argc, char* argv[])
             "_exec_0" + //std::to_string(num_serial_OoO_execs) +
             "_threads_" + std::to_string(num_threads) +
             "_servers_" + std::to_string(num_servers_per_network_node) + ".csv";
+
+            if (grid_size_x > 8) exec_order_filename = "";
 
             Grid_VN2D grid_sim(grid_size_x, grid_size_y, hop_radius, num_servers_per_network_node, max_num_intra_arrive_events, max_sim_time, num_threads, dist_seed, num_serial_OoO_execs, trace_folder_name, dist_params_file);
             grid_sim.SimulateModel(exec_order_filename);
@@ -159,6 +163,8 @@ int main(int argc, char* argv[])
             "_threads_" + std::to_string(num_threads) +
             "_servers_" + std::to_string(num_servers_per_network_node) + ".csv";
 
+            if (grid_size_x > 4) exec_order_filename = "";
+
             Grid_VN3D grid_sim(grid_size_x, grid_size_y, grid_size_z, hop_radius, num_servers_per_network_node, max_num_intra_arrive_events, max_sim_time, num_threads, dist_seed, num_serial_OoO_execs, trace_folder_name, dist_params_file);
             grid_sim.SimulateModel(exec_order_filename);
             grid_sim.PrintMeanPacketNetworkTime();
@@ -207,6 +213,8 @@ int main(int argc, char* argv[])
             "_exec_0" + //std::to_string(num_serial_OoO_execs) +
             "_threads_" + std::to_string(num_threads) +
             "_servers_" + std::to_string(num_servers_per_network_node) + ".csv";
+
+            if (grid_size_x > 4) exec_order_filename = "";
 
             Torus_3D torus_sim(grid_size_x, grid_size_y, grid_size_z, hop_radius, num_servers_per_network_node, max_num_intra_arrive_events, max_sim_time, num_threads, dist_seed, num_serial_OoO_execs, trace_folder_name, dist_params_file);
             torus_sim.SimulateModel(exec_order_filename);

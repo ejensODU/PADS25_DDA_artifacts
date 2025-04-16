@@ -82,10 +82,10 @@ public:
     int GetSize() const { return _E.size(); }
     
     // Execute events serially in timestamp order
-    void ExecuteSerial(double& simTime, std::atomic<int>& numEventsExecuted, std::string execOrderFilename);
+    void ExecuteSerial_IO(double& simTime, std::atomic<int>& numEventsExecuted, std::string IO_ExecOrderFilename);
     
     // Execute events serially but with out-of-order capabilities
-    void ExecuteSerial_OoO(double& simTime, std::atomic<int>& numEventsExecuted, int distSeed, 
+    void ExecuteSerial_OoO(double& simTime, std::atomic<int>& numEventsExecuted, int distSeed,
                          int numSerialOoO_Execs, std::string IO_ExecOrderFilename);
     
     // Get ready events for out-of-order serial execution

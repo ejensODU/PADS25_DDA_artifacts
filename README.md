@@ -4,7 +4,12 @@
 
 ## ACM SIGSIM-PADS 25 (2025)
 
-This repository contains the artifacts for our paper "Out of Order and Causally Correct: Ready-Event Discovery through Data-Dependence Analysis" presented at ACM SIGSIM-PADS 25.
+This repository contains the reproducibility artifact for our paper "Out of Order and Causally Correct: Ready-Event Discovery through Data-Dependence Analysis" presented at ACM SIGSIM-PADS 25.
+
+## Abstract
+
+Data-dependence analysis can identify causally-unordered events in a pending event set.  The execution of these events is independent from all other scheduled events, making them ready for execution.  These events can be executed out of order or in parallel. This approach may find and utilize more parallelism than spatial-decomposition parallelization methods, which are limited by the number of subdomains and by synchronization methods.  This work provides formal definitions that use data-dependence analysis to find causally-unordered events and uses these definitions to measure parallelism in several discrete-event simulation models.
+A variant of the event-graph formalism is proposed, which assists with identifying ready events, by more clearly visualizing data dependencies between event types. Data dependencies between two event types may be direct or indirect, where the latter case considers the scheduling of intermediate events. Data dependencies and scheduling dependencies in a discrete-event simulation model are used to define time-interval limits that support the identification of events that are ready for execution. Experimental results from serial simulation testing demonstrate the availability of numerous events that are ready for execution, depending on model characteristics.  The mean size of the ready-event set varies from about 1.5 to 110 for the tested models, depending on the model type, the size of the model, and delay distribution parameters.  These findings support future work to develop a parallel capability to dynamically identify and execute ready events in a multi-threaded environment.
 
 ## Setup with Docker
 
@@ -34,12 +39,14 @@ This repository contains the artifacts for our paper "Out of Order and Causally 
    - Compile the code
    - Run the simulation experiments
    - Generate plots based on the results
+   - Generate tables from the simulation data
 
 ## Artifact Structure
 
 - `OoO_Sim`: Main simulation binary (compiled from C++ sources)
 - `PADS_resilient_auto_testing.py`: Script to run simulations with various parameters
 - `PADS_plot_REs_64.py`, `PADS_plot_REs_729.py`, `PADS_plot_order_diffs_64.py`: Scripts to generate figures
+- `PADS_generate_table_2.py`, `PADS_generate_table_5.py`, `PADS_generate_table_6.py`: Scripts to generate tables
 - Supporting directories:
   - `exec_orders/`: Execution order data
   - `input_files/`: Simulation input configurations
@@ -60,7 +67,9 @@ This repository contains the artifacts for our paper "Out of Order and Causally 
    python3 PADS_resilient_auto_testing.py
    ```
    
-   > **Note:** In `PADS_resilient_auto_testing.py`, the `max_workers` parameter controls how many simulation runs are executed in parallel. Adjust this value based on your system's CPU and memory constraints.
+   > **Note:** In `PADS_resilient_auto_testing.py`, the `max_workers` parameter controls how many simulation runs are executed in parallel. The default is the maximum number of cores. Adjust this value based on your system's CPU and memory constraints. Using 12 cores on a Snapdragon X Elite machine, testing uses about 6 GB of RAM and takes about 5 hours.
+   >
+   > **Important:** The `DELETE_TRACES` variable may be set to `False` if you want to keep the simulation traces, but this requires over 200 GB of hard drive space. Set to `True` by default.
 
 3. **Generate plots** after simulations complete:
    ```bash
@@ -73,6 +82,14 @@ This repository contains the artifacts for our paper "Out of Order and Causally 
    ```bash
    python3 PADS25_python_sim_nQ_DIR.py
    ```
+
+5. **Generate tables** (must be done after generating figures):
+   ```bash
+   python3 PADS25_python_sim_nQ_DIR.py | python3 PADS_generate_table_2.py
+   python3 PADS_generate_table_5.py
+   python3 PADS_generate_table_6.py
+   ```
+   > **Note:** For tables 5 and 6, the plotting scripts (Step 3) must be run first before running the table-generation scripts.
 
 ## Artifact Description
 
@@ -92,6 +109,9 @@ This artifact contains the code used to run the simulations described in the pap
    - `PADS_plot_REs_729.py`: Generates plots for 729-node networks
    - `PADS_plot_order_diffs_64.py`: Analyzes execution order differences
    - `PADS25_python_sim_nQ_DIR.py`: Simple Python simulation for the DIR algorithm
+   - `PADS_generate_table_2.py`: Generates Table 2 from DIR simulation results
+   - `PADS_generate_table_5.py`: Generates Table 5 from plot data
+   - `PADS_generate_table_6.py`: Generates Table 6 from plot data
 
 ## Figure and Table Reproduction
 
@@ -103,22 +123,14 @@ Generated by `PADS_plot_REs_64.py` and `PADS_plot_REs_729.py`
 ### Figure 7
 Generated by `PADS_plot_order_diffs_64.py`
 
-> **Note:** The C++ simulator code that generates the data required for Figure 7 has been commented out (as it's very slow to run). To enable this functionality:
-> 
-> 1. In `OoO_EventSet.cpp`, uncomment the block-commented code in:
->    - `void OoO_EventSet::ExecuteSerial()` - Look for "// Serial IO execution order"
->    - `void OoO_EventSet::ExecuteSerial_OoO()` - Look for "// Serial OoO execution order"
-> 
-> 2. Output from running with this code uncommented is already provided in the `exec_orders/` directory.
-
 ### Table 2
-Generated by running `PADS25_python_sim_nQ_DIR.py`
+Generated by running `PADS25_python_sim_nQ_DIR.py | python3 PADS_generate_table_2.py`
 
 ### Table 5
-Generated by `PADS_plot_REs_64.py` and `PADS_plot_REs_729.py` (also generate CSV files)
+Generated by `PADS_generate_table_5.py` (after running `PADS_plot_REs_64.py` and `PADS_plot_REs_729.py`)
 
 ### Table 6
-Generated by `PADS_plot_order_diffs_64.py` (also generates CSV file)
+Generated by `PADS_generate_table_6.py` (after running `PADS_plot_order_diffs_64.py`)
 
 ## Extending the Artifact
 

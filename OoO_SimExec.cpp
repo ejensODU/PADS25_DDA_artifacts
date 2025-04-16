@@ -23,7 +23,7 @@ void OoO_SimExec::RunSerialSim(std::string execOrderFilename)
     if (0 == _numSerialOoO_Execs) {
         // Regular in-order serial execution
         auto start = std::chrono::high_resolution_clock::now();
-        _ES->ExecuteSerial(_simTime, _numEventsExecuted, execOrderFilename);
+        _ES->ExecuteSerial_IO(_simTime, _numEventsExecuted, execOrderFilename);
 
         auto stop = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);

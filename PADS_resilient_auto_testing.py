@@ -8,19 +8,12 @@ import queue
 import threading
 import filecmp
 import csv
+import shutil
 import sys
 from datetime import datetime
 
-# NETWORK_CONFIGS = [
-   # {'model': '1D_ring_network', 'size': [16]},
-   # {'model': 'VN2D_grid_network', 'size': [4, 4]},
-   # {'model': 'VN3D_grid_network', 'size': [2, 2, 2]},
-   # {'model': '3D_torus_network', 'size': [2, 2, 2]},
-   # {'model': '1D_ring_network', 'size': [64]},
-   # {'model': 'VN2D_grid_network', 'size': [8, 8]},
-   # {'model': 'VN3D_grid_network', 'size': [4, 4, 4]},
-   # {'model': '3D_torus_network', 'size': [4, 4, 4]}
-# ]
+# Delete traces to free up space (>200 GB)
+DELETE_TRACES = True
 
 NETWORK_CONFIGS = [
    {'model': '1D_ring_network', 'size': [64]},
@@ -56,10 +49,26 @@ def load_completed_experiments():
         try:
             df = pd.read_csv(RESULTS_FILE)
             for _, row in df.iterrows():
+                # Handle hop_radius formatting to match get_experiment_key
+                hop_radius = row['hop_radius']
+                if pd.isna(hop_radius) or str(hop_radius).lower() in ['nan', 'n/a']:
+                    hop_radius_str = 'N/A'
+                else:
+                    # Convert numeric value to integer format if it's a float number (e.g., '4.0' -> '4')
+                    try:
+                        hop_radius_float = float(hop_radius)
+                        if hop_radius_float.is_integer():
+                            hop_radius_str = str(int(hop_radius_float))
+                        else:
+                            hop_radius_str = str(hop_radius_float)
+                    except (ValueError, TypeError):
+                        # If conversion fails, keep original string
+                        hop_radius_str = str(hop_radius)
+                
                 key = (
                     row['model'],
                     row['size'],
-                    str(row['hop_radius']),
+                    hop_radius_str,
                     row['dist_seed'],
                     row['params_config']
                 )
@@ -249,6 +258,10 @@ def run_experiment(config, dist_seed, params_config, hop_radius=None, completed_
     if not traces_match:
         print("Error: traces do not match!")
         sys.exit(0)
+    # Clean up after successful comparison
+    if DELETE_TRACES:
+        shutil.rmtree(io_trace_folder, ignore_errors=True)
+        shutil.rmtree(ooo_trace_folder, ignore_errors=True)
 
     result = {
         'model': config['model'],
@@ -273,7 +286,8 @@ def run_experiment(config, dist_seed, params_config, hop_radius=None, completed_
 
 def main():
     setup_results_file()
-    max_workers = 4  # Adjust based on your system
+    # Parallelized testing
+    max_workers = os.cpu_count()
 
     # Load completed experiments at startup
     completed_experiments = load_completed_experiments()
